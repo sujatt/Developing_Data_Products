@@ -1,0 +1,127 @@
+---
+title: "Practical_Machine_Learning"
+output: html_document
+---
+
+This is my report for the course project for the Coursera course "Practical Machine Learning".
+
+```{r}
+## These are the libraries required for the program to work
+library(caret)
+library(randomForest)
+library(e1071)
+library(rpart)
+library(rpart.plot)
+```
+I first ensure that the requisite files are downloaded, if they are not; I then open them for processing.
+
+```{r}
+## The URLs for the training and test data sets
+urlTrain <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+urlTest <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+fTrain <- "pml-training.csv"
+
+## Checking to see if the file is already downloaded or not, and then opening it
+if (file.exists(fTrain)) {
+        TrainD <- read.csv(fTrain, na.strings=c("NA","#DIV/0!",""))
+} else {
+        download.file(urlTrain,fTrain,method="curl")
+        TrainD <- read.csv(fTrain, na.strings=c("NA","#DIV/0!",""))
+        }
+
+fTest <-  "pml-testing.csv"
+
+if (file.exists(fTest)) {
+        TestD <- read.csv(fTest, na.strings=c("NA","#DIV/0!",""))
+} else {
+        download.file(urlTest,fTest,method="curl")
+        TestD <- read.csv(fTest, na.strings=c("NA","#DIV/0!",""))
+}
+
+## The training and test data sets are now in TrainD and TestD, respectively.
+```
+I now set up for the cross-validation step. I take the training data set and divide it into training and test subsets (using a ratio of 60:40 for train:test). 
+```{r}
+inTrain <- createDataPartition(y = TrainD$classe, list = FALSE, p=0.6)
+trainData <- TrainD[inTrain,]
+testData <- TrainD[-inTrain,]
+dim(trainData)
+dim(testData)
+```
+I now examine the data set to identify the potential predictor variables. 
+To do this, I first eliminate variables that won't be as useful; for example, those that contain many NA values.
+```{r}
+table(is.na(trainData))
+```
+I now identify the variables that are mostly NA and remove those columns that have a lot of NA values, say those that are at least 75% NA in value. To identify them, I calculate the fraction of values that are NA in every column.
+```{r}
+navars <- colSums(is.na(trainData))/nrow(trainData)
+NAvals_75_ind <- which(navars >= 0.75)                  # These are the numbers of columns that are mostly NA
+NAvals_75_vars <- names(navars[NAvals_75_ind])          # These are the names of the mostly NA columns
+reduced_set <- trainData[,-NAvals_75_ind]
+```
+I now have a reduced training data set that does not have NA-heavy columns. Columns that have user names or time stamp data also will not be useful, so I remove the first 5 columns.
+```{r}
+reduced_set <- reduced_set[-c(1:5)]
+```
+I also remove the columns with values that have near-zero variance. 
+```{r}
+reduced_set  <- reduced_set[,-nearZeroVar(reduced_set)]
+```
+I briefly look at the remaining variables by name:
+
+```{r}
+dim(reduced_set)
+names(reduced_set)
+```
+I now commence the prediction and testing.
+I first create a decision tree using rpart, plot it, and using a confusion matrix, examine the accuracy of prediction and get an idea of the in-sample error:
+```{r}
+model_DT <- rpart(classe ~ ., data=reduced_set, method="class")
+pred_DT <- predict(model_DT, reduced_set, type = "class")
+rpart.plot(model_DT, main="Classification Tree", extra=102, under=TRUE, faclen=0)
+confusionMatrix(pred_DT, reduced_set$classe)
+```
+This model (model_DT) yields an accuracy of approximately 0.74.
+I now try a random forest:
+```{r}
+model_RF <- randomForest(classe ~., data=reduced_set, type="class")       # Random Forest model
+pred_RF <- predict(model_RF,reduced_set, type="class")
+
+# Accuracy, error rates, in sample error
+confusionMatrix(pred_RF, reduced_set$classe)
+# Accuracy clearly higher here, so going with RF.
+```
+The in-sample error is very low (the prediction is perfect), so I expect that the out-of-sample error to be low as well (less than 1%).
+The accuracy is clearly superior, so I will use random forest for predictions using the test data downloaded.
+To get an idea of the out-of-sample error, I use the test data from the 60/40 partition of the training data set:
+```{r}
+# Out of sample error with random forest
+classe_col_number <- grep("classe",names(testData))             #This is the column that is the one we want to predict
+predTest <- predict(model_RF, newdata = testData[,-classe_col_number], type="class")
+confusionMatrix(predTest,testData$classe)$table
+
+# We expect the out-of-sample error to be much less than 1% (0.3%).
+```
+The out-of-sample error is approximately 0.3%, less than 1% (calculated from the confusion matrix).
+
+I now use this random forest model to make predictions using the test data set:
+```{r}
+predict_final <- predict(model_RF,newdata=TestD,type="class")
+summary(predict_final)
+```
+I also write out each of the predictions to a text file, as stipulated fors submission.
+```{r}
+# Write files for submission
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+
+pml_write_files(predict_final)
+```
+
+
