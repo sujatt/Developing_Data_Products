@@ -19,7 +19,7 @@ at the library of datasets in R and also take a quick look at the first n number
 You can load the datasets with the "library(datasets)" command in R. To get a quick idea of the databases inside, run "library(help=datsets)".
 
 As an example, I have already uploaded the iris dataset and now look at the first 6 rows:
-```{r}
+```{r,echo=TRUE}
 head(iris,6)
 ```
 
