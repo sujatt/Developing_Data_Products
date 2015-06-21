@@ -1,14 +1,15 @@
 ---
-title       : Getting to know the existing library of datasets in R
-subtitle    : 
-author      : 
-job         : 
-framework   : io2012        # {io2012, html5slides, shower, dzslides, ...}
-highlighter : highlight.js  # {highlight.js, prettify, highlight}
-hitheme     : tomorrow      # 
-widgets     : []            # {mathjax, quiz, bootstrap}
-mode        : selfcontained # {standalone, draft}
-knit        : slidify::knit2slides
+title: "Getting to know the existing library of datasets in R"
+author: "ST"
+highlighter: highlight.js
+output: html_document
+job: null
+knit: slidify::knit2slides
+mode: standalone
+hitheme: tomorrow
+subtitle: null
+framework: io2012
+widgets: []
 ---
 
 ## What does the Shiny app do?
